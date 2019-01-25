@@ -78,10 +78,10 @@ class SSD(nn.Module):
         
         return self.conf, self.loc
 
-def get_SSD_model(batch_size):
+def get_SSD_model(batch_size, vgg_weight_path):
     norm = L2norm(128, 20)
 
-    weights_path = r'C:\Users\ruifr\.torch\models\vgg16-397923af.pth'
+    weights_path = vgg_weight_path
 
     model = models.vgg16()
     model.load_state_dict(torch.load(weights_path))

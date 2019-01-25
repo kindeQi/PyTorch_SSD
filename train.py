@@ -41,8 +41,8 @@ PATH = 'C:\\datasets\\pascal\\'
 anno_path = f'{PATH}PASCAL_VOC\\pascal_train2007.json'
 train_dataset = VOC_dataset(PATH, anno_path)
 batch_size = 16
-
-# img, bbox, label = train_dataset[img_idx]
+learning_rate = 5e-4
+vgg_weight_path = 'C:\\Users\\ruifr\\.torch\\models\\vgg16-397923af.pth'
 
 def detection_collate_fn(batch):
     imgs, bboxes, labels = [], [], []
@@ -55,7 +55,7 @@ trn_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False,
 use_cuda = torch.cuda.is_available()
 device = torch.device("cuda:0" if use_cuda else "cpu")
 
-model = get_SSD_model(batch_size)
+model = get_SSD_model(batch_size, vgg_weight_path)
 model = model.to(device)
 
 optimizer = torch.optim.SGD(params = model.parameters(), lr=1e-4, momentum=0.9)
