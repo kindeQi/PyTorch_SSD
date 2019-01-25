@@ -1,7 +1,7 @@
 ﻿# PyTorch_SSD
 Still working on it
 
-##TODO: 
+## TODO: 
 - [ ] mAP
 - [ ] NMS
 - [ ] Tunning
