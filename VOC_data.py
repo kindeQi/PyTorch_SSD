@@ -66,11 +66,11 @@ class VOC_dataset(Dataset):
             bbox.append(anno[0])
             label.append(anno[1])
         
-        print(self.img_path + self.id_fname[self.id_list[idx]])
+        # print(self.img_path + self.id_fname[self.id_list[idx]])
         img = cv2.imread(self.img_path + self.id_fname[self.id_list[idx]])
         img, bbox, label = np.float32(img), np.float32(bbox).reshape(-1, 4), np.int32(label)
         
-        print(img.shape)
+        # print(img.shape)
         
         img, bbox, label = self.transforms(img, bbox, label)
 
