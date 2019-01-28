@@ -32,10 +32,17 @@ torch.set_printoptions(precision=3)
 from SSD_model import get_SSD_model
 from VOC_data import VOC_dataset
 
-PATH = 'C:\\datasets\\pascal\\'
+# PATH = 'C:\\datasets\\pascal\\'
 
-trn_json = json.load(open(f'{PATH}PASCAL_VOC\\pascal_train2007.json')) 
-val_json = json.load(open(f'{PATH}PASCAL_VOC\\pascal_val2007.json')) 
+# trn_json = json.load(open(f'{PATH}PASCAL_VOC\\pascal_train2007.json')) 
+# val_json = json.load(open(f'{PATH}PASCAL_VOC\\pascal_val2007.json')) 
+
+PATH = '/home/kindeqi/PyTorch_SSD/dataset/VOCdevkit/VOC2007'
+trn_anno_path = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_train2007.json'
+val_anno_path = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_val2007.json'
+
+trn_json = json.load(open(trn_anno_path))
+val_json = json.load(open(val_anno_path))
 
 def show_img(im, figsize=None, ax=None):
     if not ax: fig,ax = plt.subplots(figsize=figsize)

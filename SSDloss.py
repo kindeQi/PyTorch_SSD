@@ -182,7 +182,10 @@ def loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target):
     val, arg = torch.sort(conf_loss_neg, descending=True)
     loss_cls_neg = torch.sum(conf_loss_neg[arg[:num_neg]])
 
-    loss_cls = loss_cls_neg + loss_cls_pos 
+#     loss_cls = loss_cls_neg + loss_cls_pos 
+
+#     without hard negative mining
+    loss_cls = loss_cls_pos
 
     # loss of location
     loss_loc = loc_criterion(loc_pred[pos_mask], bbox_target[pos_mask])

@@ -421,7 +421,7 @@ class PhotometricDistort(object):
 
 class Rescale(object):
     def __call__(self, image, boxes, labels):
-        return image, boxes * 300, labels
+        return image / 255, boxes * 300, labels
 
 class ToTensor(object):
     def __call__(self, image, boxes, labels):
@@ -440,9 +440,9 @@ class SSDAugmentation(object):
             # ToAbsoluteCoords(),
             Toxyxy(),
             PhotometricDistort(),
-            # Expand(self.mean),
-            # RandomSampleCrop(),
-            # RandomMirror(),
+#             Expand(self.mean),
+#             RandomSampleCrop(),
+#             RandomMirror(),
             ToPercentCoords(),
             Resize(self.size),
             SubtractMeans(self.mean),

@@ -25,6 +25,11 @@ import pandas as pd
 
 torch.set_printoptions(precision=3)
 
+# from SSD_model import get_SSD_model
+from VOC_data import VOC_dataset
+# from draw_img_utils import *
+# from SSDloss import *
+
 class L2norm(nn.Module):
     def __init__(self, n_channels, gamma):
         '''
@@ -73,8 +78,8 @@ class SSD(nn.Module):
             start = end_layer + 1
 #             print(k, x.shape)
         
-        self.conf = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(self.batch_size, -1, 21) for l in self.conf_res], dim=1)
-        self.loc = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(self.batch_size, -1, 4) for l in self.loc_res], dim=1)
+        self.conf = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 21) for l in self.conf_res], dim=1)
+        self.loc = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 4) for l in self.loc_res], dim=1)
         
         return self.conf, self.loc
 
@@ -131,5 +136,19 @@ def get_SSD_model(batch_size, vgg_weight_path):
     return model
 
 if __name__ == "__main__":
-    ssd_model = get_SSD_model()
+    
+    PATH = '/home/kindeqi/PyTorch_SSD/dataset/VOCdevkit/VOC2007'
+    trn_anno_path = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_train2007.json'
+    val_anno_path = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_val2007.json'
+    vgg_weight_path = '/home/kindeqi/.torch/models/vgg16-397923af.pth'
+    
+    ssd_model = get_SSD_model(1, vgg_weight_path)
     print('success build ssd model')
+    
+    train_dataset = VOC_dataset(PATH, trn_anno_path)
+    
+    img, bbox, label = train_dataset[0]
+    img = img.unsqueeze(0)
+    
+    conf_pred, loc_pred = ssd_model(img)
+    print(conf_pred.shape, loc_pred.shape)
