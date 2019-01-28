@@ -126,13 +126,23 @@ class SSD(nn.Module):
         for l in self.base_net.parameters():
             l.requires_grad = True
 
+    def load_reduced_fc_weight(self, reduced_fc_weight_path):
+        reduced_fc_weight = torch.load(reduced_fc_weight_path)
+        ssd_weight = self.state_dict()
+
+        for k0, k1 in zip(ssd_weight, reduced_fc_weight):
+            ssd_weight[k0] = reduced_fc_weight[k1]
+
+        self.load_state_dict(ssd_weight)
+
+
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
         nn.init.xavier_uniform(m.weight.data)
         m.bias.data.zero_()
 
 
-def get_SSD_model(batch_size, vgg_weight_path):
+def get_SSD_model(batch_size, vgg_weight_path, reduced_fc_weight):
     norm = L2norm(512, 20)
 
     weights_path = vgg_weight_path
@@ -194,13 +204,18 @@ def get_SSD_model(batch_size, vgg_weight_path):
     model.conf_layers.apply(weights_init)
     model.loc_layers.apply(weights_init)
 
+    # use reduced fc weight instead of the original vgg weight + xavier init conv6, 7
+    model.load_reduced_fc_weight(reduced_fc_weight)
+
     return model
 
 if __name__ == "__main__":
 
     config = Config('local')
-    ssd_model = get_SSD_model(1, config.vgg_weight_path)
+    ssd_model = get_SSD_model(1, config.vgg_weight_path, config.vgg_reduced_weight_path)
     ssd_model.freeze_basenet()
+
+    print(ssd_model.base_net[0].bias)
 
     print('success build ssd model')
 

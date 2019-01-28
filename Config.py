@@ -15,4 +15,4 @@ class Config(object):
             self.voc2007_trn_anno = 'C:\\datasets\\pascal\\PASCAL_VOC\\pascal_train2007.json'
             self.voc2007_val_anno = 'C:\\datasets\\pascal\\PASCAL_VOC\\pascal_val2007.json'
             self.vgg_weight_path = 'C:\\Users\\ruifr\\.torch\\models\\vgg16-397923af.pth'
-            self.vgg_reduced_weight_path = 'C:\\Users\\ruifr\\.torch\\models\\vgg16-397923af.pth'
+            self.vgg_reduced_weight_path = 'D:\\1-usc\\SSD_3rd party implementation\\ssd.pytorch\\weights\\vgg16_reducedfc.pth'
