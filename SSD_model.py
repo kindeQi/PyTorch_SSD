@@ -274,7 +274,7 @@ def get_SSD_model(batch_size, vgg_weight_path, reduced_fc_weight):
 
 if __name__ == "__main__":
 
-    config = Config('local')
+    config = Config('remote')
     ssd_model = get_SSD_model(1, config.vgg_weight_path, config.vgg_reduced_weight_path)
     ssd_model.freeze_basenet()
 
