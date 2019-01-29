@@ -150,16 +150,19 @@ def weights_init(m):
         m.bias.data.zero_()
 
 
-def lr_find(model, lr_max, lr_min, trn_dataloader):
+def lr_find(model, lr_max, lr_min, trn_dataloader, linear=True):
     '''
 
     '''
     torch.save(model.state_dict(), 'tmp.pth')
     lr_array, loss_array = [], []
-
-    ratio = lr_max / lr_min
+    
     num_batch = len(trn_dataloader)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr_min)
+    ratio = lr_max / lr_min
+    step = (lr_max - lr_min) / num_batch
+    
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr_min, momentum=0.9)
+    print('SGD')
 
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
@@ -169,8 +172,10 @@ def lr_find(model, lr_max, lr_min, trn_dataloader):
     min_loss = float('inf')
     
     for i, batch in enumerate(tqdm(trn_dataloader)):
-        
-        lr = lr_min * ratio ** (i / num_batch)
+        if linear:
+            lr = lr_min + step * i
+        else:
+            lr = lr_min * ratio ** (i / num_batch)
         optimizer.param_groups[0]['lr'] = lr
 
         imgs, bboxes, labels = batch
@@ -194,7 +199,7 @@ def lr_find(model, lr_max, lr_min, trn_dataloader):
             loss_loc, loss_cls = loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target)
             total_loc_loss += loss_loc; total_cls_loss += loss_cls
 
-            total_loss += loss_cls
+            total_loss += loss_loc
         
         total_loss /= float(imgs.shape[0])
         
@@ -202,7 +207,7 @@ def lr_find(model, lr_max, lr_min, trn_dataloader):
         if min_loss * 4 <= float(total_loss):
             break
         min_loss = min(float(min_loss), float(total_loss.data))
-        print(min_loss)
+#         print(min_loss)
         
         total_loss.backward()
         optimizer.step()
