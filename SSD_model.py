@@ -14,6 +14,7 @@ import torchvision
 from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
+from tqdm import tqdm
 
 # from fastai import transforms, model, dataset, conv_learner
 
@@ -25,11 +26,16 @@ import pandas as pd
 
 torch.set_printoptions(precision=3)
 
-# from SSD_model import get_SSD_model
 from VOC_data import VOC_dataset
 from Config import Config
 # from draw_img_utils import *
-# from SSDloss import *
+from SSDloss import *
+
+def detection_collate_fn(batch):
+    imgs, bboxes, labels = [], [], []
+    for i, b, l in batch:
+        imgs.append(i); bboxes.append(b); labels.append(l)
+    return torch.stack(imgs), bboxes, labels
 
 class L2norm(nn.Module):
     def __init__(self, n_channels, gamma):
@@ -142,6 +148,58 @@ def weights_init(m):
         m.bias.data.zero_()
 
 
+def lr_find(model, lr_max, lr_min, trn_dataloader):
+    '''
+
+    '''
+    torch.save(model.state_dict(), 'tmp.pth')
+    lr_array, loss_array = [], []
+
+    ratio = lr_max / lr_min
+    num_batch = len(trn_dataloader)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr_min, momentum=0.9)
+
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda:0" if use_cuda else "cpu")
+    model = model.to(device)
+    prior_box = get_prior_box()
+
+    for i, batch in enumerate(tqdm(trn_dataloader)):
+        lr = lr_min * ratio ** (i / num_batch)
+        optimizer.param_groups[0]['lr'] = lr
+
+        imgs, bboxes, labels = batch
+        imgs = imgs.to(device)
+        cls_preds, loc_preds = model(imgs)
+
+        model.zero_grad()
+
+        total_loss = 0
+        total_loc_loss, total_cls_loss = 0, 0
+
+        for idx in range(imgs.shape[0]):
+
+            img, bbox, label = imgs[idx], bboxes[idx], labels[idx]
+            cls_pred, loc_pred = cls_preds[idx], loc_preds[idx]
+            iou = get_iou(bbox, prior_box)
+
+            pos_mask, cls_target, bbox_target = get_target(iou, prior_box, img, bbox, label)
+            pos_mask, cls_target, bbox_target = pos_mask.to(device), cls_target.to(device), bbox_target.to(device)
+
+            loss_loc, loss_cls = loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target)
+            total_loc_loss += loss_loc; total_cls_loss += loss_cls
+
+            total_loss += loss_cls
+        
+        total_loss /= float(imgs.shape[0])
+        total_loss.backward()
+        optimizer.step()
+
+        lr_array.append(lr); loss_array.append(round(float(total_loss), 3))
+
+    model.state_dict = torch.load('tmp.pth')
+    return lr_array, loss_array
+
 def get_SSD_model(batch_size, vgg_weight_path, reduced_fc_weight):
     norm = L2norm(512, 20)
 
@@ -221,8 +279,12 @@ if __name__ == "__main__":
 
     train_dataset = VOC_dataset(config.voc2007_root, config.voc2007_trn_anno)
 
-    img, bbox, label = train_dataset[0]
-    img = img.unsqueeze(0)
+    # img, bbox, label = train_dataset[0]
+    # img = img.unsqueeze(0)
 
-    conf_pred, loc_pred = ssd_model(img)
-    print(conf_pred.shape, loc_pred.shape)
+    # conf_pred, loc_pred = ssd_model(img)
+    # print(conf_pred.shape, loc_pred.shape)
+    trn_dataloader = DataLoader(train_dataset, 16, shuffle=False, collate_fn=detection_collate_fn)
+    lr_array, loss_array = lr_find(ssd_model, 10, 1e-5, trn_dataloader)
+    print(lr_array)
+    print(loss_array)
