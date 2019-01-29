@@ -138,7 +138,8 @@ class SSD(nn.Module):
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
-        nn.init.xavier_uniform(m.weight.data)
+#         nn.init.xavier_uniform(m.weight.data)
+        nn.init.kaiming_uniform(m.weight.data)
         m.bias.data.zero_()
 
 
@@ -155,11 +156,12 @@ def lr_find(model, lr_max, lr_min, trn_dataloader):
 
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
+    model.freeze_basenet()
     model = model.to(device)
     prior_box = get_prior_box()
-
+    min_loss = float('inf')
+    
     for i, batch in enumerate(tqdm(trn_dataloader)):
-        min_loss = float('inf')
         
         lr = lr_min * ratio ** (i / num_batch)
         optimizer.param_groups[0]['lr'] = lr
@@ -190,9 +192,10 @@ def lr_find(model, lr_max, lr_min, trn_dataloader):
         total_loss /= float(imgs.shape[0])
         
         # use min_loss to terminate the lr find more quickly
-        if min_loss * 4 <= total_loss:
+        if min_loss * 4 <= float(total_loss):
             break
-        min_loss = min(min_loss, total_loss)
+        min_loss = min(float(min_loss), float(total_loss.data))
+        print(min_loss)
         
         total_loss.backward()
         optimizer.step()
@@ -265,7 +268,7 @@ def get_SSD_model(batch_size, vgg_weight_path, reduced_fc_weight):
     model.loc_layers.apply(weights_init)
 
     # use reduced fc weight instead of the original vgg weight + xavier init conv6, 7
-    model.load_reduced_fc_weight(reduced_fc_weight)
+#     model.load_reduced_fc_weight(reduced_fc_weight)
 
     return model
 
@@ -287,6 +290,6 @@ if __name__ == "__main__":
     # conf_pred, loc_pred = ssd_model(img)
     # print(conf_pred.shape, loc_pred.shape)
     trn_dataloader = DataLoader(train_dataset, 16, shuffle=False, collate_fn=detection_collate_fn)
-    lr_array, loss_array = lr_find(ssd_model, 10, 1e-5, trn_dataloader)
+    lr_array, loss_array = lr_find(ssd_model, 1, 1e-3, trn_dataloader)
     print(lr_array)
     print(loss_array)
