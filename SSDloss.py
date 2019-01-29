@@ -30,7 +30,7 @@ import pandas as pd
 
 torch.set_printoptions(precision=3)
 
-from SSD_model import get_SSD_model
+# from SSD_model import get_SSD_model
 from VOC_data import VOC_dataset
 from draw_img_utils import *
 

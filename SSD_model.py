@@ -31,12 +31,6 @@ from Config import Config
 # from draw_img_utils import *
 from SSDloss import *
 
-def detection_collate_fn(batch):
-    imgs, bboxes, labels = [], [], []
-    for i, b, l in batch:
-        imgs.append(i); bboxes.append(b); labels.append(l)
-    return torch.stack(imgs), bboxes, labels
-
 class L2norm(nn.Module):
     def __init__(self, n_channels, gamma):
         '''
@@ -157,7 +151,7 @@ def lr_find(model, lr_max, lr_min, trn_dataloader):
 
     ratio = lr_max / lr_min
     num_batch = len(trn_dataloader)
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr_min, momentum=0.9)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr_min)
 
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
@@ -165,6 +159,8 @@ def lr_find(model, lr_max, lr_min, trn_dataloader):
     prior_box = get_prior_box()
 
     for i, batch in enumerate(tqdm(trn_dataloader)):
+        min_loss = float('inf')
+        
         lr = lr_min * ratio ** (i / num_batch)
         optimizer.param_groups[0]['lr'] = lr
 
@@ -192,6 +188,12 @@ def lr_find(model, lr_max, lr_min, trn_dataloader):
             total_loss += loss_cls
         
         total_loss /= float(imgs.shape[0])
+        
+        # use min_loss to terminate the lr find more quickly
+        if min_loss * 4 <= total_loss:
+            break
+        min_loss = min(min_loss, total_loss)
+        
         total_loss.backward()
         optimizer.step()
 
