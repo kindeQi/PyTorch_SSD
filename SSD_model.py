@@ -31,6 +31,13 @@ from Config import Config
 # from draw_img_utils import *
 from SSDloss import *
 
+
+def detection_collate_fn(batch):
+    imgs, bboxes, labels = [], [], []
+    for i, b, l in batch:
+        imgs.append(i); bboxes.append(b); labels.append(l)
+    return torch.stack(imgs), bboxes, labels
+
 class L2norm(nn.Module):
     def __init__(self, n_channels, gamma):
         '''
