@@ -50,14 +50,14 @@ class L2norm(nn.Module):
         '''
         super(L2norm, self).__init__()
         self.gamma = gamma
-        self.weights = nn.Parameter(torch.randn(n_channels))
-        self.weights = nn.init.constant_(self.weights, self.gamma)
+        self.weight = nn.Parameter(torch.randn(n_channels))
+        self.weight = nn.init.constant_(self.weight, self.gamma)
     
     def forward(self, x):
         norm = torch.sum(x ** 2, dim=1, keepdim=True) ** 0.5
-        weights = self.weights.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+        weight = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3)
     
-        return weights * x / norm
+        return weight * x / norm
 
 class SSD(nn.Module):
     def __init__(self, batch_size, base_net, reduced_fc, extra, conf_layers, loc_layers, special_layers, l2_norm):
@@ -142,6 +142,15 @@ class SSD(nn.Module):
 
         self.load_state_dict(ssd_weight)
 
+    def load_trained_model(self, trained_path):
+        original_state_dict = self.state_dict()
+        trained_state_dict = torch.load(trained_path)
+
+        for k in original_state_dict.keys():
+            print('{}, {}'.format(k, original_state_dict[k].shape))
+        print('------------------')
+        for k in trained_state_dict.keys():
+            print('{}, {}'.format(k, trained_state_dict[k].shape))
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
@@ -286,7 +295,7 @@ def get_SSD_model(batch_size, vgg_weight_path, reduced_fc_weight):
 
 if __name__ == "__main__":
 
-    config = Config('remote')
+    config = Config('local')
     ssd_model = get_SSD_model(1, config.vgg_weight_path, config.vgg_reduced_weight_path)
     ssd_model.freeze_basenet()
 
@@ -301,7 +310,9 @@ if __name__ == "__main__":
 
     # conf_pred, loc_pred = ssd_model(img)
     # print(conf_pred.shape, loc_pred.shape)
-    trn_dataloader = DataLoader(train_dataset, 16, shuffle=False, collate_fn=detection_collate_fn)
-    lr_array, loss_array = lr_find(ssd_model, 1, 1e-3, trn_dataloader)
-    print(lr_array)
-    print(loss_array)
+    # trn_dataloader = DataLoader(train_dataset, 16, shuffle=False, collate_fn=detection_collate_fn)
+    # lr_array, loss_array = lr_find(ssd_model, 1, 1e-3, trn_dataloader)
+    # print(lr_array)
+    # print(loss_array)
+
+    ssd_model.load_trained_model(config.trained_path)
