@@ -94,6 +94,7 @@ class SSD(nn.Module):
                 x_l2_norm = self.l2_norm(x)
                 self.conf_res.append(self.conf_layers[0](x_l2_norm))
                 self.loc_res.append(self.loc_layers[0](x_l2_norm))
+                print(0, torch.sum(x_l2_norm))
 
         # reduced_fc
         for l in self.reduced_fc:
@@ -101,13 +102,16 @@ class SSD(nn.Module):
         
         self.conf_res.append(self.conf_layers[1](x))
         self.loc_res.append(self.loc_layers[1](x))
+        print(1, torch.sum(x))
 
         #extra_layer
         for i, l in enumerate(self.extra):
-            x = l(x)
+            # x = l(x)
+            x = F.relu(l(x), inplace=True)
             if i % 2 == 1:
                 self.conf_res.append(self.conf_layers[i // 2 + 2](x))
                 self.loc_res.append(self.loc_layers[i // 2 + 2](x))
+                print(i // 2 + 2, torch.sum(x))
 
 #         for k, end_layer in enumerate(self.special_layers):
 # #             print(start, end_layer)
