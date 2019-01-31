@@ -127,6 +127,9 @@ class SSD(nn.Module):
         self.conf = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 21) for l in self.conf_res], dim=1)
         self.loc = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 4) for l in self.loc_res], dim=1)
         
+        print(self.conf[: 10, :])
+        print(self.loc[: 10, :])
+
         return self.conf, self.loc
 
     def freeze_basenet(self):

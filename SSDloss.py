@@ -44,17 +44,17 @@ def get_prior_box():
     prior_box = []
     for k, f in enumerate(feature_map):
         for i, j in product(range(feature_map[k]), repeat=2):
-            cx, cy = (i + 0.5) / f, (j + 0.5) / f
+            top, left = (i + 0.5) / f, (j + 0.5) / f
             h, w  = [], []
             h.append(min_size[k]); w.append(min_size[k])
             h.append((min_size[k] * max_size[k]) ** 0.5); w.append((min_size[k] * max_size[k]) ** 0.5)
             
             for ar in aspect_ratio[k]:
-                h.append((min_size[k] / ar) ** 0.5); w.append((min_size[k] * ar) ** 0.5)
-                h.append((min_size[k] * ar) ** 0.5); w.append((min_size[k] / ar) ** 0.5)
+                h.append(min_size[k] * ar ** 0.5); w.append(min_size[k] / ar ** 0.5)
+                h.append(min_size[k] / ar ** 0.5); w.append(min_size[k] * ar ** 0.5)
             
             for hi, wi in zip(h, w):
-                prior_box.append((cx, cy, hi, wi))
+                prior_box.append((top, left, hi, wi))
     prior_box = torch.tensor(prior_box)
 
     return prior_box
@@ -200,20 +200,23 @@ def loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target):
 
 
 if __name__ == "__main__":
-    PATH = 'C:\\datasets\\pascal\\'
-    anno_path = f'{PATH}PASCAL_VOC\\pascal_train2007.json'
-    train_dataset = VOC_dataset(PATH, anno_path)
+    # PATH = 'C:\\datasets\\pascal\\'
+    # anno_path = f'{PATH}PASCAL_VOC\\pascal_train2007.json'
+    # train_dataset = VOC_dataset(PATH, anno_path)
 
-    img, bbox, label = train_dataset[7]
-    img = img.unsqueeze(0)
+    # img, bbox, label = train_dataset[7]
+    # img = img.unsqueeze(0)
+
+    # prior_box = get_prior_box()
+    # iou = get_iou(bbox, prior_box)
+
+    # pos_mask, cls_target, bbox_target = get_target(iou, prior_box, img, bbox, label)
+    
+    # model = get_SSD_model(1)
+    # cls_pred, loc_pred = model(img)
+    # cls_pred, loc_pred = cls_pred.squeeze(0), loc_pred.squeeze(0)
+
+    # loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target)
 
     prior_box = get_prior_box()
-    iou = get_iou(bbox, prior_box)
-
-    pos_mask, cls_target, bbox_target = get_target(iou, prior_box, img, bbox, label)
-    
-    model = get_SSD_model(1)
-    cls_pred, loc_pred = model(img)
-    cls_pred, loc_pred = cls_pred.squeeze(0), loc_pred.squeeze(0)
-
-    loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target)
+    print(prior_box[38* 38 * 4: 38 * 38 * 4 + 10, :])
