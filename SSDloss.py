@@ -54,7 +54,8 @@ def get_prior_box():
                 h.append(min_size[k] / ar ** 0.5); w.append(min_size[k] * ar ** 0.5)
             
             for hi, wi in zip(h, w):
-                prior_box.append((top, left, hi, wi))
+#                 the order of left and top is very important
+                prior_box.append((left, top, hi, wi))
     prior_box = torch.tensor(prior_box)
 
     return prior_box

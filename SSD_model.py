@@ -94,7 +94,7 @@ class SSD(nn.Module):
                 x_l2_norm = self.l2_norm(x)
                 self.conf_res.append(self.conf_layers[0](x_l2_norm))
                 self.loc_res.append(self.loc_layers[0](x_l2_norm))
-                print(0, torch.sum(x_l2_norm))
+#                 print(0, torch.sum(x_l2_norm))
 
         # reduced_fc
         for l in self.reduced_fc:
@@ -102,7 +102,7 @@ class SSD(nn.Module):
         
         self.conf_res.append(self.conf_layers[1](x))
         self.loc_res.append(self.loc_layers[1](x))
-        print(1, torch.sum(x))
+#         print(1, torch.sum(x))
 
         #extra_layer
         for i, l in enumerate(self.extra):
@@ -111,7 +111,7 @@ class SSD(nn.Module):
             if i % 2 == 1:
                 self.conf_res.append(self.conf_layers[i // 2 + 2](x))
                 self.loc_res.append(self.loc_layers[i // 2 + 2](x))
-                print(i // 2 + 2, torch.sum(x))
+#                 print(i // 2 + 2, torch.sum(x))
 
 #         for k, end_layer in enumerate(self.special_layers):
 # #             print(start, end_layer)
@@ -126,9 +126,6 @@ class SSD(nn.Module):
         
         self.conf = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 21) for l in self.conf_res], dim=1)
         self.loc = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 4) for l in self.loc_res], dim=1)
-        
-        print(self.conf[: 10, :])
-        print(self.loc[: 10, :])
 
         return self.conf, self.loc
 
@@ -152,12 +149,30 @@ class SSD(nn.Module):
     def load_trained_model(self, trained_path):
         original_state_dict = self.state_dict()
         trained_state_dict = torch.load(trained_path)
+        
+        trained2original = {'vgg':'base_net',
+                            'L2Norm':'l2_norm',
+                            'extras': 'extra',
+                            'loc': 'loc_layers',
+                            'conf': 'conf_layers'
+                           }
 
-        for k in original_state_dict.keys():
-            print('{}, {}'.format(k, original_state_dict[k].shape))
-        print('------------------')
-        for k in trained_state_dict.keys():
-            print('{}, {}'.format(k, trained_state_dict[k].shape))
+        for trained_k in trained_state_dict.keys():
+            layer_name = trained_k.split('.')[0]
+            layer_num = trained_k.split('.')[1]
+            layer_other = '.'.join((trained_k.split('.')[2:]))
+            if layer_name == 'L2Norm':
+                original_key = 'l2_norm.weight'
+        #         original_state_dict['l2_norm.weights'] = trained_state_dict[k]
+            elif layer_name == 'vgg' and int(layer_num) > 28:
+                num = str(int(layer_num) - 30)
+                original_key = '.'.join(['reduced_fc', num, layer_other])
+            else:
+                original_key = '.'.join([trained2original[layer_name], layer_num, layer_other])
+        #     print('{:15s}:{:15s}'.format(trained_k, original_key))
+            original_state_dict[original_key] = trained_state_dict[trained_k]
+
+        self.load_state_dict(original_state_dict)
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
@@ -215,7 +230,7 @@ def lr_find(model, lr_max, lr_min, trn_dataloader, linear=True):
             loss_loc, loss_cls = loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target)
             total_loc_loss += loss_loc; total_cls_loss += loss_cls
 
-            total_loss += loss_loc
+            total_loss += loss_cls
         
         total_loss /= float(imgs.shape[0])
         
