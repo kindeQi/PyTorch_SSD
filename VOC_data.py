@@ -74,7 +74,11 @@ class VOC_dataset(Dataset):
         
         img, bbox, label = self.transforms(img, bbox, label)
 
+        # from (h, w, c) to (c, h, w)
         img = torch.tensor(img).permute(2, 0, 1)
+
+        # from bgr to rgb
+        img = img[(2, 1, 0), :, :]
 
         return img, bbox, label
     
@@ -82,7 +86,7 @@ class VOC_dataset(Dataset):
         return len(self.dataset_json['images'])
 
 if __name__ == "__main__":
-    config = Config('remote')
+    config = Config('local')
     trn_dataset = VOC_dataset(config.voc2007_root, config.voc2007_trn_anno)
     img, bbox, label = trn_dataset[8]
     
