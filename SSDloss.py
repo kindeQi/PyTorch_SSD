@@ -68,17 +68,12 @@ def get_iou(bbox, prior_box):
     '''
     Description:
     get iou of each image, shape: (number of objects, 8732)
-
     Adapated from https://github.com/amdegroot/ssd.pytorch
-
     Since every image contains different number of objects, the matrix for iou will be different
     We have to use a for loop to handle all the images in a batch
 
-
-    imgs_bbox: List[List[cx, cy, w, h]]
-    prior_box: tensor, (8732, 4)
-
-    imgs_bbox: List[List[xyxy]]
+    Arguments:
+    bbox: List[List[xyxy]], percentage
     prior_box: tensor, (8732, 4)
     '''
     gt = torch.FloatTensor(bbox.copy())
@@ -245,17 +240,11 @@ def loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target):
     _, neg_idx = torch.sort(conf_loss_neg, descending=True)
     loss_cls_neg = torch.sum(conf_loss_neg[neg_idx[:num_neg]])
 
-#     loss_cls = loss_cls_neg + loss_cls_pos 
-
-#     without hard negative mining
     loss_cls = loss_cls_pos + loss_cls_neg
 
     # loss of location
     loss_loc = loc_criterion(loc_pred[pos_mask], bbox_target[pos_mask])
     loss_loc = torch.sum(loss_loc)
-    
-    # loss = loss_loc + loss_cls / float(num_pos)
-#     print(loss_cls_pos, loss_cls_neg, loss_loc)
 
     return loss_loc / float(num_pos), loss_cls / float(num_pos)
 

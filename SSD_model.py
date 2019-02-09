@@ -69,19 +69,10 @@ class SSD(nn.Module):
         self.loc_layers = nn.ModuleList(loc_layers)
         self.l2_norm = l2_norm
 
-        # self.base_net = base_net
-        # self.reduced_fc = reduced_fc
-        # self.extra = extra
-        # self.conf_layers = conf_layers
-        # self.loc_layers = loc_layers
-        # self.l2_norm = l2_norm
-
         self.special_layers = special_layers
         self.batch_size = batch_size
         
     def forward(self, x):
-        # test purpose
-        # start = 0
         self.conf_res, self.loc_res = [], []
         self.conf, self.loc = [], []
 
@@ -142,6 +133,7 @@ class SSD(nn.Module):
         ssd_weight = self.state_dict()
 
         for k0, k1 in zip(ssd_weight, reduced_fc_weight):
+            print(k0, k1)
             ssd_weight[k0] = reduced_fc_weight[k1]
 
         self.load_state_dict(ssd_weight)
@@ -230,7 +222,7 @@ def lr_find(model, lr_max, lr_min, trn_dataloader, linear=True):
             loss_loc, loss_cls = loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target)
             total_loc_loss += loss_loc; total_cls_loss += loss_cls
 
-            total_loss += loss_cls
+            total_loss += (loss_cls + loss_loc)
         
         total_loss /= float(imgs.shape[0])
         
@@ -311,7 +303,7 @@ def get_SSD_model(batch_size, vgg_weight_path, reduced_fc_weight):
     model.loc_layers.apply(weights_init)
 
     # use reduced fc weight instead of the original vgg weight + xavier init conv6, 7
-#     model.load_reduced_fc_weight(reduced_fc_weight)
+    model.load_reduced_fc_weight(reduced_fc_weight)
 
     return model
 
@@ -319,7 +311,7 @@ if __name__ == "__main__":
 
     config = Config('local')
     ssd_model = get_SSD_model(1, config.vgg_weight_path, config.vgg_reduced_weight_path)
-    ssd_model.freeze_basenet()
+    # ssd_model.freeze_basenet()
 
     print(ssd_model.base_net[0].bias)
 

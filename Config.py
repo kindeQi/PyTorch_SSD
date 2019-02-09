@@ -1,6 +1,6 @@
 class Config(object):
     def __init__(self, status):
-        self.batch_size = 16
+        self.batch_size = 32
         self.learning_rate = 1e-3
         
         if status == 'remote':
