@@ -255,7 +255,7 @@ def loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target):
     loss_loc = torch.sum(loss_loc)
     
     # loss = loss_loc + loss_cls / float(num_pos)
-    print(loss_cls_pos, loss_cls_neg, loss_loc)
+#     print(loss_cls_pos, loss_cls_neg, loss_loc)
 
     return loss_loc / float(num_pos), loss_cls / float(num_pos)
 
