@@ -22,14 +22,14 @@ from matplotlib import patches, patheffects
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-from augmentation import SSDAugmentation
+from augmentation import SSDAugmentation, SSD_Val_Augmentation
 
 from Config import Config
 
 torch.set_printoptions(precision=3)
 
 class VOC_dataset(Dataset):
-    def __init__(self, root_path, anno_path):
+    def __init__(self, root_path, anno_path, trn_val='trn'):
         '''
         Description:
         Dataset
@@ -38,6 +38,7 @@ class VOC_dataset(Dataset):
         root_path: (str) the path to data directory ('C:\\datasets\\pascal\\') in this case
         anno_path: (str) the path to annotation file ('C:\\datasets\\pascal\\PASCAL_VOC\\pascal_train2007.json') in this case
         '''
+        self.trn_val = trn_val
         self.dataset_json = json.load(open(anno_path))
 #         self.img_path = root_path + '/JPEGImages/'
         self.img_path = root_path
@@ -56,8 +57,11 @@ class VOC_dataset(Dataset):
 
         self.idx_category = {tmp['id']: tmp['name'] for tmp in self.dataset_json['categories']}
         self.category_idx = {tmp['name']: tmp['id'] for tmp in self.dataset_json['categories']}
-
-        self.transforms = SSDAugmentation()
+        
+        if trn_val == 'trn':
+            self.transforms = SSDAugmentation()
+        else:
+            self.transforms = SSD_Val_Augmentation()
     
     def __getitem__(self, idx):
         bbox, label = [], []
@@ -71,9 +75,8 @@ class VOC_dataset(Dataset):
         img, bbox, label = np.float32(img), np.float32(bbox).reshape(-1, 4), np.int32(label)
         
         # print(img.shape)
-        
         img, bbox, label = self.transforms(img, bbox, label)
-
+        
         # from (h, w, c) to (c, h, w)
         img = torch.tensor(img).permute(2, 0, 1)
 
@@ -86,8 +89,10 @@ class VOC_dataset(Dataset):
         return len(self.dataset_json['images'])
 
 if __name__ == "__main__":
-    config = Config('local')
-    trn_dataset = VOC_dataset(config.voc2007_root, config.voc2007_trn_anno)
-    img, bbox, label = trn_dataset[8]
+    config = Config('remote')
+    train_dataset = VOC_dataset(config.voc2007_root, config.voc2007_trn_anno, trn_val='trn')
     
-    print(len(trn_dataset), img.shape, label.shape, bbox.shape)
+    img, bbox, label = train_dataset[8]
+    
+#     trn_dataloader = DataLoader(train_dataset, config.batch_size, shuffle=True, collate_fn=detection_collate_fn, num_workers=8)
+    print('over')

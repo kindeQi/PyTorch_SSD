@@ -133,7 +133,7 @@ class SSD(nn.Module):
         ssd_weight = self.state_dict()
 
         for k0, k1 in zip(ssd_weight, reduced_fc_weight):
-            print(k0, k1)
+#             print(k0, k1)
             ssd_weight[k0] = reduced_fc_weight[k1]
 
         self.load_state_dict(ssd_weight)

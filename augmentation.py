@@ -452,6 +452,30 @@ class SSDAugmentation(object):
             # ToTensor(),
             # PermuteImage(),
         ])
-
+    def __call__(self, img, boxes, labels):
+        return self.augment(img, boxes, labels)
+    
+class SSD_Val_Augmentation(object):
+    def __init__(self, size=300, mean=(104, 117, 123)):
+        self.mean = mean
+        self.size = size
+        self.augment = Compose([
+            # ConvertFromInts(),
+            # ToAbsoluteCoords(),
+            Toxyxy(),
+#             PhotometricDistort(),
+#             Expand(self.mean),
+#             RandomSampleCrop(),
+#             RandomMirror(),
+            ToPercentCoords(),
+            Resize(self.size),
+            SubtractMeans(self.mean),
+            # Toxywh(),
+            # Rescale(),
+            
+            # ToTensor(),
+            # PermuteImage(),
+        ])
+        
     def __call__(self, img, boxes, labels):
         return self.augment(img, boxes, labels)
