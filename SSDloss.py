@@ -33,6 +33,7 @@ torch.set_printoptions(precision=3)
 # from SSD_model import get_SSD_model
 from VOC_data import VOC_dataset
 from draw_img_utils import *
+from Config import Config
 
 def get_prior_box():
 
@@ -248,35 +249,76 @@ def loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target):
 
     return loss_loc / float(num_pos), loss_cls / float(num_pos)
 
+def nms(conf_threshold, iou_threshold, top_k, conf, loc, priors):
+    '''
+    Description:
+    greedy nms
+
+    Arguments:
+    conf_threshold: int, default=0.45
+    iou_threshold: int, defualt=0.01
+    top_k: int, default=5
+    conf: 
+    loc:
+    priors
+    '''
+    # 1. get the conf_score, conf_cls, bboxes and areaes
+    loc_ = decode(loc[0], priors, [0.1, 0.2]) * 300
+
+    conf_ = F.softmax(conf[0])
+    conf_score, conf_cls = torch.max(conf_[:, 1:], dim=1)
+    conf_cls += 1
+
+    conf_mask = conf_score > conf_threshold
+    conf_score, conf_cls, loc_ = conf_score[conf_mask], conf_cls[conf_mask], loc_[conf_mask]
+
+    conf_score, conf_idx = torch.sort(conf_score, descending=True)
+    conf_cls, bboxes = conf_cls[conf_idx], loc_[conf_idx]
+
+    wh = bboxes[:, 2:] - bboxes[:, :2]
+    areaes = wh[:, 0] * wh[:, 1]
+
+    # 2. get the result bbox and result class
+    res_bbox, res_cls = [], []
+
+    for idx in range(len(conf_score)):
+        if conf_score[idx] != 0:
+            res_bbox.append(bboxes[idx])
+            res_cls.append(conf_cls[idx])
+            
+            for i_head in range(idx + 1, len(conf_score)):
+                if conf_score[i_head] != 0:
+                    max_xy = torch.max(bboxes[idx][:2], bboxes[i_head][:2])
+                    min_xy = torch.min(bboxes[idx][2:], bboxes[i_head][2:])
+                    wh = torch.clamp(min_xy - max_xy, min=0)
+                    intersect = wh[0] * wh[1]
+                    iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
+                    if iou > iou_threshold:
+                        conf_score[i_head] = 0
+
+    res_bbox, res_cls = res_bbox[:top_k], res_cls[:top_k]
+    return res_bbox, res_cls
 
 if __name__ == "__main__":
-    # PATH = 'C:\\datasets\\pascal\\'
-    # anno_path = f'{PATH}PASCAL_VOC\\pascal_train2007.json'
-    # train_dataset = VOC_dataset(PATH, anno_path)
+    config = Config('local')
+    conf_threshold = 0.1
+    iou_threshold = 0.45
+    top_k = 5
 
-    # img, bbox, label = train_dataset[7]
-    # img = img.unsqueeze(0)
+    config = Config('local')
+    ssd_model = get_SSD_model(1, config.vgg_weight_path, config.vgg_reduced_weight_path)
+    ssd_model.load_trained_model(config.trained_path)
+    test_dataset = VOC_dataset(config.voc2007_root, config.voc2012_root, config.voc2007_test_anno, 'test')
 
-    # prior_box = get_prior_box()
-    # iou = get_iou(bbox, prior_box)
+    idx = 19
+    img, bbox, label = test_dataset[idx]
 
-    # pos_mask, cls_target, bbox_target = get_target(iou, prior_box, img, bbox, label)
-    
-    # model = get_SSD_model(1)
-    # cls_pred, loc_pred = model(img)
-    # cls_pred, loc_pred = cls_pred.squeeze(0), loc_pred.squeeze(0)
+    conf, loc = ssd_model(img.unsqueeze(0))
 
-    # loss(cls_pred, loc_pred, pos_mask, cls_target, bbox_target)
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda:0" if use_cuda else "cpu")
+    ssd_model = ssd_model.to(device)
 
-    bbox = [[ 0.383333325386047,  0.167582422494888,  0.579166650772095,
-           0.543956041336060],
-         [ 0.185416668653488,  0.211538463830948,  0.837499976158142,
-           0.920329689979553]]
-    bbox = np.array(bbox)
-    label= [15, 13]
-
-    prior_box = get_prior_box()
-    iou = get_iou(bbox, prior_box)
-    pos_mask = iou > 0.5
-    iou[pos_mask].shape
-    print(iou[pos_mask])
+    priors = get_prior_box()
+    res_bbox, res_cls = nms(conf_threshold, iou_threshold, top_k, conf, loc)
+    print(res_bbpx, res_cls)
