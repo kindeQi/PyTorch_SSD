@@ -5,17 +5,36 @@ class Config(object):
         
         if status == 'remote':
             self.voc2007_root = '/home/kindeqi/PyTorch_SSD/dataset/VOCdevkit/VOC2007/JPEGImages/'
+            self.voc2012_root = '/home/kindeqi/PyTorch_SSD/dataset/VOCdevkit/VOC2012/JPEGImages/'
+
+            self.voc2012_trn_anno = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_train2012.json'
+            self.voc2012_val_anno = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_val2012.json'
+
             self.voc2007_trn_anno = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_train2007.json'
             self.voc2007_val_anno = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_val2007.json'
+            self.voc2007_test_anno = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_test2007.json'
+
             self.vgg_weight_path = '/home/kindeqi/.torch/models/vgg16-397923af.pth'
             self.vgg_reduced_weight_path = '/home/kindeqi/PyTorch_SSD/weights/vgg16_reducedfc.pth'
             self.trained_path = '/home/kindeqi/PyTorch_SSD/weights/ssd300_mAP_77.43_v2.pth'
             
+            
         if status == 'local':
             self.batch_size = 4
             self.voc2007_root = 'C:\\datasets\\pascal\\VOC2007\\JPEGImages\\'
+            self.voc2012_root = 'C:\\datasets\\pascal\\VOC2012\\JPEGImages\\'
+
             self.voc2007_trn_anno = 'C:\\datasets\\pascal\\PASCAL_VOC\\pascal_train2007.json'
             self.voc2007_val_anno = 'C:\\datasets\\pascal\\PASCAL_VOC\\pascal_val2007.json'
+
+            self.voc2012_trn_anno = 'C:\\datasets\\pascal\\PASCAL_VOC\\pascal_train2012.json'
+            self.voc2012_val_anno = 'C:\\datasets\\pascal\\PASCAL_VOC\\pascal_val2012.json'
+            self.voc2007_test_anno = 'C:\\datasets\\pascal\\PASCAL_VOC\\pascal_test2007.json'
+
             self.vgg_weight_path = 'C:\\Users\\ruifr\\.torch\\models\\vgg16-397923af.pth'
             self.vgg_reduced_weight_path = 'D:\\1-usc\\SSD_3rd party implementation\\ssd.pytorch\\weights\\vgg16_reducedfc.pth'
             self.trained_path = 'D:\\1-usc\\SSD_3rd party implementation\\ssd.pytorch\\weights\\ssd300_mAP_77.43_v2.pth'
+        
+        self.anno_path = [self.voc2012_trn_anno, self.voc2012_val_anno, self.voc2007_trn_anno, self.voc2007_val_anno]
+            
+            
