@@ -26,21 +26,23 @@ from matplotlib import patches, patheffects
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
 
 torch.set_printoptions(precision=3)
 
 # from SSD_model import get_SSD_model
 from VOC_data import VOC_dataset
 
-PATH = 'C:\\datasets\\pascal\\'
-trn_json = json.load(open(f'{PATH}PASCAL_VOC\\pascal_train2007.json')) 
-val_json = json.load(open(f'{PATH}PASCAL_VOC\\pascal_val2007.json')) 
-
-# PATH = '/home/kindeqi/PyTorch_SSD/dataset/VOCdevkit/VOC2007'
-# trn_anno_path = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_train2007.json'
-# val_anno_path = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_val2007.json'
-# trn_json = json.load(open(trn_anno_path))
-# val_json = json.load(open(val_anno_path))
+if sys.platform == 'win32':
+    PATH = 'C:\\datasets\\pascal\\'
+    trn_json = json.load(open(f'{PATH}PASCAL_VOC\\pascal_train2007.json')) 
+    val_json = json.load(open(f'{PATH}PASCAL_VOC\\pascal_val2007.json'))
+else:
+    PATH = '/home/kindeqi/PyTorch_SSD/dataset/VOCdevkit/VOC2007'
+    trn_anno_path = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_train2007.json'
+    val_anno_path = '/home/kindeqi/PyTorch_SSD/annotation/PASCAL_VOC/pascal_val2007.json'
+    trn_json = json.load(open(trn_anno_path))
+    val_json = json.load(open(val_anno_path))
 
 def show_img(im, figsize=None, ax=None):
     if not ax: fig,ax = plt.subplots(figsize=figsize)
@@ -100,7 +102,8 @@ def draw_idx(i, trn_id_fname, trn_id_annotation, idx_category):
     None
     '''
     im_a = trn_id_annotation[i]
-    im = plt.imread(f'{PATH}\\JPEGIMAGES\\{trn_id_fname[i]}')
+#     im = plt.imread(f'{PATH}\\JPEGIMAGES\\{trn_id_fname[i]}')
+    im = os.path.join(PATH, 'JPEGIMAGES', trn_id_fname[i])
     print(im.shape)
     draw_im(im, im_a, idx_category)
     
@@ -153,8 +156,9 @@ def get_anno_data():
     batch_size = 8
     start_idx = 8
     fnames = [trn_id_fname[k] for k in trn_id_fname.keys()][start_idx:8 + start_idx]
-    imgs = [cv2.imread(f'{PATH}JPEGImages\\{fname}') for fname in fnames]
-
+#     imgs = [cv2.imread(f'{PATH}JPEGImages\\{fname}') for fname in fnames]
+    imgs = [cv2.imread(os.path.join(PATH, 'JPEGImages', fname)) for fname in fnames]
+    
     imgs_ratio = [[300 / img.shape[1], 300 / img.shape[0]] for img in imgs]
     imgs_size = [img.shape[:2] for img in imgs]
 
