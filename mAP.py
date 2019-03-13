@@ -180,16 +180,17 @@ class mAP(object):
                                                                    np.array(labels),
                                                                    np.array(ignores))]
 
+    def add_predictions(self, img_id, conf_threshold, iou_threshold, top_k, conf, loc, priors):
+        nms_score, nms_bbox, nms_cls = self.nms(conf_threshold, iou_threshold, top_k, conf, loc, priors)
+        for score, bbox, cls in zip(nms_score, nms_bbox, nms_cls):
+            self.detection_res[int(cls)].append({'score': score, 'bbox': bbox, 'label': cls, 'img_id':img_id})
+    
     def add_single_gt(self, img_id, bbox, label, ignore):
         self.ground_truths[img_id].append({'bbox': np.array(bbox), 'label': label, 'used': False, 'ignore': ignore})
     
     def add_single_pred(self, img_id, score, bbox, cls):
         self.detection_res[int(cls)].append({'score': score, 'bbox': np.array(bbox), 'label': cls, 'img_id':img_id})
 
-    def add_predictions(self, img_id, conf_threshold, iou_threshold, top_k, conf, loc, priors):
-        nms_score, nms_bbox, nms_cls = self.nms(conf_threshold, iou_threshold, top_k, conf, loc, priors)
-        for score, bbox, cls in zip(nms_score, nms_bbox, nms_cls):
-            self.detection_res[int(cls)].append({'score': score, 'bbox': bbox, 'label': cls, 'img_id':img_id})
     
 
     def nms(self, conf, loc, priors, conf_threshold=0.01, iou_threshold=0.45, top_k=200):
@@ -200,7 +201,7 @@ class mAP(object):
         Arguments:
         conf_threshold: int, default=0.45
         iou_threshold: int, defualt=0.01
-        top_k: int, default=5
+        top_k: int, default=200
         conf: 
         loc:
         priors
@@ -328,7 +329,7 @@ if __name__ == "__main__":
                 bbox = np.array([float(i) for i in line[2:]])
                 mean_average_precision.add_single_pred(img_id, score, bbox, idx)
 
-    mAP = mean_average_precision.calculate_mAP()
+    mAP = mean_average_precision.calculate_mAP(metric='12')
     
     print(mAP)
     print(np.mean([mAP[k] for k in mAP.keys()]))

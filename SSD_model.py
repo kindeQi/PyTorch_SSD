@@ -85,7 +85,7 @@ class SSD(nn.Module):
                 x_l2_norm = self.l2_norm(x)
                 self.conf_res.append(self.conf_layers[0](x_l2_norm))
                 self.loc_res.append(self.loc_layers[0](x_l2_norm))
-#                 print(0, torch.sum(x_l2_norm))
+        # print(0, torch.sum(x_l2_norm))
 
         # reduced_fc
         for l in self.reduced_fc:
@@ -93,7 +93,7 @@ class SSD(nn.Module):
         
         self.conf_res.append(self.conf_layers[1](x))
         self.loc_res.append(self.loc_layers[1](x))
-#         print(1, torch.sum(x))
+        # print(1, torch.sum(x))
 
         #extra_layer
         for i, l in enumerate(self.extra):
@@ -102,18 +102,18 @@ class SSD(nn.Module):
             if i % 2 == 1:
                 self.conf_res.append(self.conf_layers[i // 2 + 2](x))
                 self.loc_res.append(self.loc_layers[i // 2 + 2](x))
-#                 print(i // 2 + 2, torch.sum(x))
+    # print(i // 2 + 2, torch.sum(x))
 
-#         for k, end_layer in enumerate(self.special_layers):
-# #             print(start, end_layer)
-#             for l in self.base_net[start: end_layer + 1]:
-# #                 print(x.shape)
-#                 x = l(x)
-#             self.conf_res.append(self.conf_layers[k](x))
-#             self.loc_res.append(self.loc_layers[k](x))
-            
-#             start = end_layer + 1
-# #             print(k, x.shape)
+    #         for k, end_layer in enumerate(self.special_layers):
+    # #             print(start, end_layer)
+    #             for l in self.base_net[start: end_layer + 1]:
+    # #                 print(x.shape)
+    #                 x = l(x)
+    #             self.conf_res.append(self.conf_layers[k](x))
+    #             self.loc_res.append(self.loc_layers[k](x))
+                
+    #             start = end_layer + 1
+    # #             print(k, x.shape)
         
         self.conf = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 21) for l in self.conf_res], dim=1)
         self.loc = torch.cat([l.permute(0, 2, 3, 1).contiguous().view(x.shape[0], -1, 4) for l in self.loc_res], dim=1)
@@ -133,7 +133,7 @@ class SSD(nn.Module):
         ssd_weight = self.state_dict()
 
         for k0, k1 in zip(ssd_weight, reduced_fc_weight):
-#             print(k0, k1)
+            # print(k0, k1)
             ssd_weight[k0] = reduced_fc_weight[k1]
 
         self.load_state_dict(ssd_weight)
@@ -168,7 +168,7 @@ class SSD(nn.Module):
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
-#         nn.init.xavier_uniform(m.weight.data)
+    # nn.init.xavier_uniform(m.weight.data)
         nn.init.kaiming_uniform(m.weight.data)
         m.bias.data.zero_()
 
@@ -230,7 +230,7 @@ def lr_find(model, lr_max, lr_min, trn_dataloader, linear=True):
         if min_loss * 4 <= float(total_loss):
             break
         min_loss = min(float(min_loss), float(total_loss.data))
-#         print(min_loss)
+    # print(min_loss)
         
         total_loss.backward()
         optimizer.step()

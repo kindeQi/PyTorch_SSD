@@ -1,3 +1,5 @@
+# Adapted from fast.ai, object detection
+
 import os
 import torch
 from tqdm import tqdm_notebook
