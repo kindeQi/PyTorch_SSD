@@ -210,7 +210,12 @@ class mAP(object):
         loc_ = decode(loc[0], priors, [0.1, 0.2]) * 300
 
         conf_ = F.softmax(conf[0])
-        conf_score, conf_cls = torch.max(conf_[:, 1:], dim=1)
+
+        # ignore the bkg class
+        # conf_score, conf_cls = torch.max(conf_[:, 1:], dim=1)
+        conf_score, conf_cls = torch.max(conf_, dim=1)
+        conf_bkg_mask = conf_cls != 0
+        conf_score, conf_cls, loc_ = conf_score[conf_bkg_mask], conf_cls[conf_bkg_mask], loc_[conf_bkg_mask]
 
         #     if use trained model, add this line
         if use_trained_model:
@@ -228,23 +233,33 @@ class mAP(object):
         # 2. get the result bbox and result class
         res_score, res_bbox, res_cls = [], [], []
 
+        # how many detections for each class could been found
+        cls_count = {_: 200 for _ in range(1, 21)}
+
         for idx in range(len(conf_score)):
             if conf_score[idx] != 0:
                 res_score.append(conf_score[idx])
                 res_bbox.append(bboxes[idx])
                 res_cls.append(conf_cls[idx])
 
+                cur_class = int(conf_cls[idx])
                 for i_head in range(idx + 1, len(conf_score)):
-                    if conf_score[i_head] != 0:
-                        max_xy = torch.max(bboxes[idx][:2], bboxes[i_head][:2])
-                        min_xy = torch.min(bboxes[idx][2:], bboxes[i_head][2:])
-                        wh = torch.clamp(min_xy - max_xy, min=0)
-                        intersect = wh[0] * wh[1]
-                        iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
-                        if iou > iou_threshold:
-                            conf_score[i_head] = 0
+                    if conf_cls[i_head] != cur_class:
+                        continue
 
-        res_score, res_bbox, res_cls = res_score[:top_k], res_bbox[:top_k], res_cls[:top_k]
+                    else:
+                        if conf_score[i_head] != 0:
+                            max_xy = torch.max(bboxes[idx][:2], bboxes[i_head][:2])
+                            min_xy = torch.min(bboxes[idx][2:], bboxes[i_head][2:])
+                            wh = torch.clamp(min_xy - max_xy, min=0)
+                            intersect = wh[0] * wh[1]
+                            iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
+                            if iou > iou_threshold and cls_count[cur_class] > 0:
+                                cls_count[cur_class] -= 1
+                                conf_score[i_head] = 0
+
+        # no need to restrict top k
+        # res_score, res_bbox, res_cls = res_score[:top_k], res_bbox[:top_k], res_cls[:top_k]
         
         new_res_score, new_res_bbox, new_res_cls = [], [], []
         for i in range(len(res_score)):
@@ -257,27 +272,36 @@ class mAP(object):
         return new_res_score, new_res_bbox, new_res_cls
 
 if __name__ == "__main__":
-    # config = Config('local')
-    # ssd_model = get_SSD_model(config.batch_size, config.vgg_weight_path, config.vgg_reduced_weight_path)
-    # ssd_model.load_trained_model(config.trained_path)
+    config = Config('local')
+    ssd_model = get_SSD_model(config.batch_size, config.vgg_weight_path, config.vgg_reduced_weight_path)
+    ssd_model.load_trained_model(config.trained_path)
 
-    # test_dataset = VOC_dataset(config.voc2007_root, config.voc2012_root, config.voc2007_test_anno, 'test')
+    test_dataset = VOC_dataset(config.voc2007_root, config.voc2012_root, config.voc2007_test_anno, 'test')
     # DataLoader = DataLoader(test_dataset)
 
-    # idx = 19
-    # img, bbox, label, img_id, ignore = test_dataset[idx]
-    
-    # mean_average_precision = mAP(config.voc2007_test_anno)
-    # print(bbox, '\n', label, '\n', img_id, '\n', ignore)
+    for idx in range(15):
+        # idx = 19
+        img, bbox, label, img_id, ignore, img_scale = test_dataset[idx]
+        
+        mean_average_precision = mAP(config.voc2007_test_anno)
+        # print(bbox, '\n', label, '\n', img_id, '\n', ignore)
 
-    # use_cuda = torch.cuda.is_available()
-    # device = torch.device("cuda:0" if use_cuda else "cpu")
-    # ssd_model = ssd_model.to(device)
-    # conf, loc = ssd_model(img.unsqueeze(0).to(device))
-    # priors = get_prior_box()
+        use_cuda = torch.cuda.is_available()
+        device = torch.device("cuda:0" if use_cuda else "cpu")
+        ssd_model = ssd_model.to(device)
+        conf, loc = ssd_model(img.unsqueeze(0).to(device))
+        priors = get_prior_box()
 
-    # res_score, res_bbox, res_cls = mean_average_precision.nms(conf, loc, priors.to(device), conf_threshold=0.6)
-    # print(res_score, '\n', res_bbox, '\n', res_cls)
+        res_score, res_bbox, res_cls = mean_average_precision.nms(conf, loc, priors.to(device))
+        print('-----------------{}-----------------'.format(idx))
+        for _ in range(len(res_bbox)):
+            res_bbox[_][1] *= img_scale[0] / 300
+            res_bbox[_][3] *= img_scale[0] / 300
+            res_bbox[_][0] *= img_scale[1] / 300
+            res_bbox[_][2] *= img_scale[1] / 300
+            print('bbox: {}, {}'.format(_, res_bbox[_].cpu().detach().numpy()))
+            print('class: {}, {}'.format(_, int(res_cls[_])))
+        # print(idx, '\n', res_bbox, '\n', res_cls, '\n', res_score)
 
     # config = Config('local')
     # mean_average_precision = mAP(config.voc2007_test_anno)
@@ -316,30 +340,30 @@ if __name__ == "__main__":
 
     # --------------------------------------
 
-    config = Config('local')
-    mean_average_precision = mAP(config.voc2007_test_anno)
+    # config = Config('local')
+    # mean_average_precision = mAP(config.voc2007_test_anno)
 
-    id_anno = mean_average_precision.get_id_annotation(config.voc2007_test_anno)
+    # id_anno = mean_average_precision.get_id_annotation(config.voc2007_test_anno)
 
-    for img_id in id_anno.keys():
-        for anno in id_anno[img_id]:
-            bbox = np.array(anno['bbox'])
-            bbox[2:] = bbox[:2] + bbox[2:]
-            mean_average_precision.add_single_gt(img_id, bbox, anno['label'], anno['ignore'])
+    # for img_id in id_anno.keys():
+    #     for anno in id_anno[img_id]:
+    #         bbox = np.array(anno['bbox'])
+    #         bbox[2:] = bbox[:2] + bbox[2:]
+    #         mean_average_precision.add_single_gt(img_id, bbox, anno['label'], anno['ignore'])
             
-    all_file = glob.glob('./results/*.txt')
-    for file in all_file:
-        idx = catagory_idx[file.split('_')[2].split('.')[0]]
-        with open(file) as f:
-            lines = f.readlines()
-            for line in lines:
-                line = line.split(' ')
-                img_id = int(line[0])
-                score = float(line[1])
-                bbox = np.array([float(i) for i in line[2:]])
-                mean_average_precision.add_single_pred(img_id, score, bbox, idx)
+    # all_file = glob.glob('./results/*.txt')
+    # for file in all_file:
+    #     idx = catagory_idx[file.split('_')[2].split('.')[0]]
+    #     with open(file) as f:
+    #         lines = f.readlines()
+    #         for line in lines:
+    #             line = line.split(' ')
+    #             img_id = int(line[0])
+    #             score = float(line[1])
+    #             bbox = np.array([float(i) for i in line[2:]])
+    #             mean_average_precision.add_single_pred(img_id, score, bbox, idx)
 
-    mAP = mean_average_precision.calculate_mAP(metric='12')
+    # mAP = mean_average_precision.calculate_mAP(metric='12')
     
-    print(mAP)
-    print(np.mean([mAP[k] for k in mAP.keys()]))
+    # print(mAP)
+    # print(np.mean([mAP[k] for k in mAP.keys()]))

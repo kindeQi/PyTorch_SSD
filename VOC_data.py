@@ -92,17 +92,20 @@ class VOC_dataset(Dataset):
         img_id = self.id_list[idx]
         img = cv2.imread(self.id_fname[self.id_list[idx]])
         img, bbox, label = np.float32(img), np.float32(bbox).reshape(-1, 4), np.int32(label)
-        
+                
+        # get image scale
+        img_scale = img.shape[0], img.shape[1]
+
         # print(img.shape)
         img, bbox, label = self.transforms(img, bbox, label)
-        
+
         # from (h, w, c) to (c, h, w)
         img = torch.tensor(img).permute(2, 0, 1)
 
         # from bgr to rgb
         img = img[(2, 1, 0), :, :]
 
-        return img, bbox, label, img_id, ignore
+        return img, bbox, label, img_id, ignore, img_scale
     
     def __len__(self):
         return len(self.id_list)
