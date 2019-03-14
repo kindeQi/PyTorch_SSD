@@ -212,14 +212,12 @@ class mAP(object):
         conf_ = F.softmax(conf[0])
 
         # ignore the bkg class
-        # conf_score, conf_cls = torch.max(conf_[:, 1:], dim=1)
-        conf_score, conf_cls = torch.max(conf_, dim=1)
-        conf_bkg_mask = conf_cls != 0
-        conf_score, conf_cls, loc_ = conf_score[conf_bkg_mask], conf_cls[conf_bkg_mask], loc_[conf_bkg_mask]
-
-        #     if use trained model, add this line
-        #  if use_trained_model:
-        #       conf_cls += 1
+        conf_score, conf_cls = torch.max(conf_[:, 1:], dim=1)
+        if use_trained_model:
+            conf_cls += 1
+#         conf_score, conf_cls = torch.max(conf_, dim=1)
+#         conf_bkg_mask = conf_cls != 0
+#         conf_score, conf_cls, loc_ = conf_score[conf_bkg_mask], conf_cls[conf_bkg_mask], loc_[conf_bkg_mask]
 
         conf_mask = conf_score > conf_threshold
         conf_score, conf_cls, loc_ = conf_score[conf_mask], conf_cls[conf_mask], loc_[conf_mask]
@@ -261,15 +259,15 @@ class mAP(object):
         # no need to restrict top k
         # res_score, res_bbox, res_cls = res_score[:top_k], res_bbox[:top_k], res_cls[:top_k]
         
-        new_res_score, new_res_bbox, new_res_cls = [], [], []
-        for i in range(len(res_score)):
-            if res_score[i] > 0.6:
-                new_res_score.append(res_score[i])
-                new_res_bbox.append(res_bbox[i])
-                new_res_cls.append(res_cls[i])
+#         new_res_score, new_res_bbox, new_res_cls = [], [], []
+#         for i in range(len(res_score)):
+#             if res_score[i] > 0.6:
+#                 new_res_score.append(res_score[i])
+#                 new_res_bbox.append(res_bbox[i])
+#                 new_res_cls.append(res_cls[i])
                 
-#         return res_score, res_bbox, res_cls
-        return new_res_score, new_res_bbox, new_res_cls
+        return res_score, res_bbox, res_cls
+#         return new_res_score, new_res_bbox, new_res_cls
 
 if __name__ == "__main__":
     config = Config('remote')
