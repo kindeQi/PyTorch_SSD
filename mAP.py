@@ -215,9 +215,10 @@ class mAP(object):
         conf_score, conf_cls = torch.max(conf_[:, 1:], dim=1)
         if use_trained_model:
             conf_cls += 1
-#         conf_score, conf_cls = torch.max(conf_, dim=1)
-#         conf_bkg_mask = conf_cls != 0
-#         conf_score, conf_cls, loc_ = conf_score[conf_bkg_mask], conf_cls[conf_bkg_mask], loc_[conf_bkg_mask]
+
+        # conf_score, conf_cls = torch.max(conf_, dim=1)
+        # conf_bkg_mask = conf_cls != 0
+        # conf_score, conf_cls, loc_ = conf_score[conf_bkg_mask], conf_cls[conf_bkg_mask], loc_[conf_bkg_mask]
 
         conf_mask = conf_score > conf_threshold
         conf_score, conf_cls, loc_ = conf_score[conf_mask], conf_cls[conf_mask], loc_[conf_mask]
@@ -225,36 +226,70 @@ class mAP(object):
         conf_score, conf_idx = torch.sort(conf_score, descending=True)
         conf_cls, bboxes = conf_cls[conf_idx], loc_[conf_idx]
 
-        wh = bboxes[:, 2:] - bboxes[:, :2]
-        areaes = wh[:, 0] * wh[:, 1]
-
-        # 2. get the result bbox and result class
         res_score, res_bbox, res_cls = [], [], []
 
-        # how many detections for each class could been found
-        cls_count = {_: 200 for _ in range(1, 21)}
+        # keep top 200 results for each class
+        conf_score, conf_cls, bboxes = conf_score[:200], conf_cls[:200], bboxes[:200]
 
-        for idx in range(len(conf_score)):
-            if conf_score[idx] != 0:
-                res_score.append(conf_score[idx])
-                res_bbox.append(bboxes[idx])
-                res_cls.append(conf_cls[idx])
+        for class_idx in range(1, 21):
+            class_mask = (conf_cls == class_idx)
+            if torch.sum(class_mask) == 0:
+                continue
+            # else:
+            #     print(class_idx, torch.sum(class_mask))
+            conf_score_, bboxes_ = conf_score[class_mask][:200], bboxes[class_mask][:200]
 
-                cur_class = int(conf_cls[idx])
-                for i_head in range(idx + 1, len(conf_score)):
-                    if conf_cls[i_head] != cur_class:
-                        continue
+            wh = bboxes_[:, 2:] - bboxes_[:, :2]
+            areaes = wh[:, 0] * wh[:, 1]
 
-                    else:
-                        if conf_score[i_head] != 0:
-                            max_xy = torch.max(bboxes[idx][:2], bboxes[i_head][:2])
-                            min_xy = torch.min(bboxes[idx][2:], bboxes[i_head][2:])
+            for idx in range(len(conf_score_)):
+                if conf_score_[idx] != 0:
+                    res_score.append(conf_score_[idx])
+                    res_bbox.append(bboxes_[idx])
+                    res_cls.append(class_idx)
+
+                    for i_head in range(idx + 1, len(conf_score_)):
+                        if conf_score_[i_head] != 0:
+                            max_xy = torch.max(bboxes_[idx][:2], bboxes_[i_head][:2])
+                            min_xy = torch.min(bboxes_[idx][2:], bboxes_[i_head][2:])
                             wh = torch.clamp(min_xy - max_xy, min=0)
                             intersect = wh[0] * wh[1]
                             iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
-                            if iou > iou_threshold and cls_count[cur_class] > 0:
-                                cls_count[cur_class] -= 1
-                                conf_score[i_head] = 0
+                            if iou > iou_threshold:
+                                conf_score_[i_head] = 0
+
+
+        # wh = bboxes[:, 2:] - bboxes[:, :2]
+        # areaes = wh[:, 0] * wh[:, 1]
+
+        # # 2. get the result bbox and result class
+        # res_score, res_bbox, res_cls = [], [], []
+
+        # # how many detections for each class could been found
+        # cls_count = {_: 200 for _ in range(1, 21)}
+
+        # for idx in range(len(conf_score)):
+        #     if conf_score[idx] != 0:
+        #         cur_class = int(conf_cls[idx])
+        #         if cls_count[cur_class] > 0:
+        #             res_score.append(conf_score[idx])
+        #             res_bbox.append(bboxes[idx])
+        #             res_cls.append(conf_cls[idx])
+        #             cls_count[cur_class] -= 1
+
+        #             for i_head in range(idx + 1, len(conf_score)):
+        #                 if conf_cls[i_head] != cur_class:
+        #                     continue
+
+        #                 else:
+        #                     if conf_score[i_head] != 0:
+        #                         max_xy = torch.max(bboxes[idx][:2], bboxes[i_head][:2])
+        #                         min_xy = torch.min(bboxes[idx][2:], bboxes[i_head][2:])
+        #                         wh = torch.clamp(min_xy - max_xy, min=0)
+        #                         intersect = wh[0] * wh[1]
+        #                         iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
+        #                         if iou > iou_threshold:
+        #                             conf_score[i_head] = 0
 
         # no need to restrict top k
         # res_score, res_bbox, res_cls = res_score[:top_k], res_bbox[:top_k], res_cls[:top_k]
@@ -270,46 +305,46 @@ class mAP(object):
 #         return new_res_score, new_res_bbox, new_res_cls
 
 if __name__ == "__main__":
-    config = Config('remote')
+    config = Config('local')
     ssd_model = get_SSD_model(config.batch_size, config.vgg_weight_path, config.vgg_reduced_weight_path)
     ssd_model.load_trained_model(config.trained_path)
 
     test_dataset = VOC_dataset(config.voc2007_root, config.voc2012_root, config.voc2007_test_anno, 'test')
     # DataLoader = DataLoader(test_dataset)
 
-    for idx in range(15):
-        # idx = 19
-        img, bbox, label, img_id, ignore, img_scale = test_dataset[idx]
-        
-        mean_average_precision = mAP(config.voc2007_test_anno)
-        # print(bbox, '\n', label, '\n', img_id, '\n', ignore)
+    # for idx in range(15):
+    idx = 3
+    img, bbox, label, img_id, ignore, img_scale = test_dataset[idx]
+    
+    mean_average_precision = mAP(config.voc2007_test_anno)
+    # print(bbox, '\n', label, '\n', img_id, '\n', ignore)
 
-        use_cuda = torch.cuda.is_available()
-        device = torch.device("cuda:0" if use_cuda else "cpu")
-        ssd_model = ssd_model.to(device)
-        conf, loc = ssd_model(img.unsqueeze(0).to(device))
-        priors = get_prior_box()
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda:0" if use_cuda else "cpu")
+    ssd_model = ssd_model.to(device)
+    conf, loc = ssd_model(img.unsqueeze(0).to(device))
+    priors = get_prior_box()
 
-        res_score, res_bbox, res_cls = mean_average_precision.nms(conf, loc, priors.to(device))
-        print('-----------------{}-----------------'.format(img_id))
-        print("ground truths:\n")
-        for _ in range(len(bbox)):
-            bbox[_][1] *= img_scale[0]
-            bbox[_][3] *= img_scale[0]
-            bbox[_][0] *= img_scale[1]
-            bbox[_][2] *= img_scale[1]
-            print("gt_bbox: {}, {}".format(_ + 1, bbox[_]))
-        print('labels: {}\n'.format(label))
-        
-        print("predictions: \n")
-        for _ in range(len(res_bbox)):
-            res_bbox[_][1] *= img_scale[0] / 300
-            res_bbox[_][3] *= img_scale[0] / 300
-            res_bbox[_][0] *= img_scale[1] / 300
-            res_bbox[_][2] *= img_scale[1] / 300
-            print('bbox: {}, {}'.format(_ + 1, res_bbox[_].cpu().detach().numpy()))
-            print('class: {}, {}'.format(_ + 1, int(res_cls[_])))
-        # print(idx, '\n', res_bbox, '\n', res_cls, '\n', res_score)
+    res_score, res_bbox, res_cls = mean_average_precision.nms(conf, loc, priors.to(device), conf_threshold=0.05)
+    print('-----------------{}-----------------'.format(img_id))
+    print("ground truths:\n")
+    for _ in range(len(bbox)):
+        bbox[_][1] *= img_scale[0]
+        bbox[_][3] *= img_scale[0]
+        bbox[_][0] *= img_scale[1]
+        bbox[_][2] *= img_scale[1]
+        print("gt_bbox: {}, {}".format(_ + 1, bbox[_]))
+    print('labels: {}\n'.format(label))
+    
+    print("predictions: \n")
+    for _ in range(len(res_bbox)):
+        res_bbox[_][1] *= img_scale[0] / 300
+        res_bbox[_][3] *= img_scale[0] / 300
+        res_bbox[_][0] *= img_scale[1] / 300
+        res_bbox[_][2] *= img_scale[1] / 300
+        print('bbox: {}, {}'.format(_ + 1, res_bbox[_].cpu().detach().numpy()))
+        print('class: {}, {}'.format(int(res_cls[_]), res_score[_]))
+    # print(idx, '\n', res_bbox, '\n', res_cls, '\n', res_score)
 
     # config = Config('local')
     # mean_average_precision = mAP(config.voc2007_test_anno)
