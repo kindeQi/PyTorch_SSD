@@ -218,8 +218,8 @@ class mAP(object):
         conf_score, conf_cls, loc_ = conf_score[conf_bkg_mask], conf_cls[conf_bkg_mask], loc_[conf_bkg_mask]
 
         #     if use trained model, add this line
-        if use_trained_model:
-            conf_cls += 1
+        #  if use_trained_model:
+        #       conf_cls += 1
 
         conf_mask = conf_score > conf_threshold
         conf_score, conf_cls, loc_ = conf_score[conf_mask], conf_cls[conf_mask], loc_[conf_mask]
@@ -272,7 +272,7 @@ class mAP(object):
         return new_res_score, new_res_bbox, new_res_cls
 
 if __name__ == "__main__":
-    config = Config('local')
+    config = Config('remote')
     ssd_model = get_SSD_model(config.batch_size, config.vgg_weight_path, config.vgg_reduced_weight_path)
     ssd_model.load_trained_model(config.trained_path)
 
@@ -293,14 +293,24 @@ if __name__ == "__main__":
         priors = get_prior_box()
 
         res_score, res_bbox, res_cls = mean_average_precision.nms(conf, loc, priors.to(device))
-        print('-----------------{}-----------------'.format(idx))
+        print('-----------------{}-----------------'.format(img_id))
+        print("ground truths:\n")
+        for _ in range(len(bbox)):
+            bbox[_][1] *= img_scale[0]
+            bbox[_][3] *= img_scale[0]
+            bbox[_][0] *= img_scale[1]
+            bbox[_][2] *= img_scale[1]
+            print("gt_bbox: {}, {}".format(_ + 1, bbox[_]))
+        print('labels: {}\n'.format(label))
+        
+        print("predictions: \n")
         for _ in range(len(res_bbox)):
             res_bbox[_][1] *= img_scale[0] / 300
             res_bbox[_][3] *= img_scale[0] / 300
             res_bbox[_][0] *= img_scale[1] / 300
             res_bbox[_][2] *= img_scale[1] / 300
-            print('bbox: {}, {}'.format(_, res_bbox[_].cpu().detach().numpy()))
-            print('class: {}, {}'.format(_, int(res_cls[_])))
+            print('bbox: {}, {}'.format(_ + 1, res_bbox[_].cpu().detach().numpy()))
+            print('class: {}, {}'.format(_ + 1, int(res_cls[_])))
         # print(idx, '\n', res_bbox, '\n', res_cls, '\n', res_score)
 
     # config = Config('local')
