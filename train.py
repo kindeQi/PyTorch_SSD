@@ -64,7 +64,7 @@ def train_ssd():
     trn_dataset = VOC_dataset(config.voc2007_root, config.voc2012_root, config.anno_path, 'trn')
     test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False,
                                 num_workers=8, collate_fn=detection_collate_fn)
-    trn_dataloader = DataLoader(trn_dataset, batch_size=2, shuffle=True, num_workers=8, collate_fn=detection_collate_fn)
+    trn_dataloader = DataLoader(trn_dataset, batch_size=32, shuffle=True, num_workers=8, collate_fn=detection_collate_fn)
 
     ssd_model = get_SSD_model(1, config.vgg_weight_path, config.vgg_reduced_weight_path)
 
@@ -122,7 +122,7 @@ def train_ssd():
             loc_loss = round(float(total_loc_loss), 3)
             t_loss = round(float(total_loss), 3)
             if i % 5 == 0:
-                print(i, 'cls_loss: {}, loc_loss: {}, loss: {}'.format(cls_loss, loc_loss, t_loss))
+                print(epoch * 515 + i, 'cls_loss: {}, loc_loss: {}, loss: {}'.format(cls_loss, loc_loss, t_loss))
             loss_array.append(t_loss)
 
         # val and save every 5 epoch
@@ -157,7 +157,7 @@ def train_ssd():
 
                 loc_loss = round(float(total_loc_loss), 3)
                 t_loss = round(float(total_loss), 3)
-                if val_i % 5 == 0:
+                if val_i % 100 == 0:
                     print(val_i, 'cls_loss: {}, loc_loss: {}, loss: {}'.format(cls_loss, loc_loss, t_loss))
                 val_array.append(t_loss)
 
