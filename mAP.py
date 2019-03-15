@@ -242,21 +242,54 @@ class mAP(object):
             wh = bboxes_[:, 2:] - bboxes_[:, :2]
             areaes = wh[:, 0] * wh[:, 1]
 
-            for idx in range(len(conf_score_)):
-                if conf_score_[idx] != 0:
-                    res_score.append(conf_score_[idx])
-                    res_bbox.append(bboxes_[idx])
-                    res_cls.append(class_idx)
+            while len(conf_score_) > 0:
+                cur_bbox = bboxes_[0]
+                cur_score = conf_score_[0]
+                cur_area = areaes[0]
 
-                    for i_head in range(idx + 1, len(conf_score_)):
-                        if conf_score_[i_head] != 0:
-                            max_xy = torch.max(bboxes_[idx][:2], bboxes_[i_head][:2])
-                            min_xy = torch.min(bboxes_[idx][2:], bboxes_[i_head][2:])
-                            wh = torch.clamp(min_xy - max_xy, min=0)
-                            intersect = wh[0] * wh[1]
-                            iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
-                            if iou > iou_threshold:
-                                conf_score_[i_head] = 0
+                res_score.append(cur_score)
+                res_bbox.append(cur_bbox)
+                res_cls.append(class_idx)
+
+                conf_score_ = conf_score_[1:]
+                bboxes_ = bboxes_[1:]
+                areaes = areaes[1:]        
+
+                if len(conf_score_) == 0:
+                    break        
+
+                max_x1 = torch.clamp(bboxes_[:, 0], min=float(cur_bbox[0]))
+                max_y1 = torch.clamp(bboxes_[:, 1], min=float(cur_bbox[1]))
+                min_x2 = torch.clamp(bboxes_[:, 2], max=float(cur_bbox[2]))
+                min_y2 = torch.clamp(bboxes_[:, 3], max=float(cur_bbox[3]))
+
+                w = torch.clamp(min_x2 - max_x1, min=0)
+                h = torch.clamp(min_y2 - max_y1, min=0)
+
+                intercests = w * h
+                iou = intercests / (cur_area + areaes - intercests) 
+                iou_mask = iou < 0.45
+
+                bboxes_ = bboxes_[iou_mask]
+                conf_score_ = conf_score_[iou_mask]
+                areaes = areaes[iou_mask]
+
+
+            # for idx in range(len(conf_score_)):
+            #     if conf_score_[idx] != 0:
+            #         res_score.append(conf_score_[idx])
+            #         res_bbox.append(bboxes_[idx])
+            #         res_cls.append(class_idx)
+
+            #         for i_head in range(idx + 1, len(conf_score_)):
+            #             if conf_score_[i_head] != 0:
+            #                 max_xy = torch.max(bboxes_[idx][:2], bboxes_[i_head][:2])
+            #                 min_xy = torch.min(bboxes_[idx][2:], bboxes_[i_head][2:])
+            #                 wh = torch.clamp(min_xy - max_xy, min=0)
+            #                 intersect = wh[0] * wh[1]
+            #                 iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
+            #                 if iou > iou_threshold:
+            #                     conf_score_[i_head] = 0
 
 
         # wh = bboxes[:, 2:] - bboxes[:, :2]
@@ -325,7 +358,7 @@ if __name__ == "__main__":
     conf, loc = ssd_model(img.unsqueeze(0).to(device))
     priors = get_prior_box()
 
-    res_score, res_bbox, res_cls = mean_average_precision.nms(conf, loc, priors.to(device), conf_threshold=0.05)
+    res_score, res_bbox, res_cls = mean_average_precision.nms(conf, loc, priors.to(device), conf_threshold=0.01)
     print('-----------------{}-----------------'.format(img_id))
     print("ground truths:\n")
     for _ in range(len(bbox)):
