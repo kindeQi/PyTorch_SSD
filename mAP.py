@@ -207,6 +207,8 @@ class mAP(object):
         priors
         '''
         # 1. get the conf_score, conf_cls, bboxes and areaes
+        loc = loc.cpu()
+        priors = priors.cpu()
         loc_ = decode(loc[0], priors, [0.1, 0.2]) * 300
 
         conf_ = F.softmax(conf[0])
@@ -229,7 +231,7 @@ class mAP(object):
         res_score, res_bbox, res_cls = [], [], []
 
         # keep top 200 results for each class
-        conf_score, conf_cls, bboxes = conf_score[:200], conf_cls[:200], bboxes[:200]
+        conf_score, conf_cls, bboxes = conf_score[:top_k * 3], conf_cls[:top_k * 3], bboxes[:top_k * 3]
 
         for class_idx in range(1, 21):
             class_mask = (conf_cls == class_idx)
