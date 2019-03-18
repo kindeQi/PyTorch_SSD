@@ -2,8 +2,8 @@
 Now it's training on a K80, iter 24k
 
 # Current
-- Current mAP: 0.692 (Expected 0.772)
-- Current iteration number: 24k
+- Current mAP: 0.751 (Expected 0.772)
+- Current iteration number: 45k
 - Train from pretrained vgg weight
 - With data augmentation
 - Training dataset: Pascal 07 + 12
