@@ -29,4 +29,4 @@ Now it's training on a K80, iter 24k
 
 ![](./png/~200.png)
 ![](./png/~10k.png)
-![](./png/~24k.png)
+![](./png/~45k.png)
