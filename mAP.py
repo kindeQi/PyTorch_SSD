@@ -31,7 +31,7 @@ from augmentation import SSDAugmentation, SSD_Val_Augmentation
 from Config import *
 from SSD_model import get_SSD_model, lr_find
 from VOC_data import VOC_dataset
-from SSDloss import *
+from loss import *
 
 from pathlib import Path
 import visdom
@@ -218,10 +218,6 @@ class mAP(object):
         if use_trained_model:
             conf_cls += 1
 
-        # conf_score, conf_cls = torch.max(conf_, dim=1)
-        # conf_bkg_mask = conf_cls != 0
-        # conf_score, conf_cls, loc_ = conf_score[conf_bkg_mask], conf_cls[conf_bkg_mask], loc_[conf_bkg_mask]
-
         conf_mask = conf_score > conf_threshold
         conf_score, conf_cls, loc_ = conf_score[conf_mask], conf_cls[conf_mask], loc_[conf_mask]
 
@@ -275,69 +271,9 @@ class mAP(object):
                 bboxes_ = bboxes_[iou_mask]
                 conf_score_ = conf_score_[iou_mask]
                 areaes = areaes[iou_mask]
-
-
-            # for idx in range(len(conf_score_)):
-            #     if conf_score_[idx] != 0:
-            #         res_score.append(conf_score_[idx])
-            #         res_bbox.append(bboxes_[idx])
-            #         res_cls.append(class_idx)
-
-            #         for i_head in range(idx + 1, len(conf_score_)):
-            #             if conf_score_[i_head] != 0:
-            #                 max_xy = torch.max(bboxes_[idx][:2], bboxes_[i_head][:2])
-            #                 min_xy = torch.min(bboxes_[idx][2:], bboxes_[i_head][2:])
-            #                 wh = torch.clamp(min_xy - max_xy, min=0)
-            #                 intersect = wh[0] * wh[1]
-            #                 iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
-            #                 if iou > iou_threshold:
-            #                     conf_score_[i_head] = 0
-
-
-        # wh = bboxes[:, 2:] - bboxes[:, :2]
-        # areaes = wh[:, 0] * wh[:, 1]
-
-        # # 2. get the result bbox and result class
-        # res_score, res_bbox, res_cls = [], [], []
-
-        # # how many detections for each class could been found
-        # cls_count = {_: 200 for _ in range(1, 21)}
-
-        # for idx in range(len(conf_score)):
-        #     if conf_score[idx] != 0:
-        #         cur_class = int(conf_cls[idx])
-        #         if cls_count[cur_class] > 0:
-        #             res_score.append(conf_score[idx])
-        #             res_bbox.append(bboxes[idx])
-        #             res_cls.append(conf_cls[idx])
-        #             cls_count[cur_class] -= 1
-
-        #             for i_head in range(idx + 1, len(conf_score)):
-        #                 if conf_cls[i_head] != cur_class:
-        #                     continue
-
-        #                 else:
-        #                     if conf_score[i_head] != 0:
-        #                         max_xy = torch.max(bboxes[idx][:2], bboxes[i_head][:2])
-        #                         min_xy = torch.min(bboxes[idx][2:], bboxes[i_head][2:])
-        #                         wh = torch.clamp(min_xy - max_xy, min=0)
-        #                         intersect = wh[0] * wh[1]
-        #                         iou = intersect / (areaes[idx] + areaes[i_head] - intersect)
-        #                         if iou > iou_threshold:
-        #                             conf_score[i_head] = 0
-
-        # no need to restrict top k
-        # res_score, res_bbox, res_cls = res_score[:top_k], res_bbox[:top_k], res_cls[:top_k]
-        
-#         new_res_score, new_res_bbox, new_res_cls = [], [], []
-#         for i in range(len(res_score)):
-#             if res_score[i] > 0.6:
-#                 new_res_score.append(res_score[i])
-#                 new_res_bbox.append(res_bbox[i])
-#                 new_res_cls.append(res_cls[i])
                 
         return res_score, res_bbox, res_cls
-#         return new_res_score, new_res_bbox, new_res_cls
+
 
 if __name__ == "__main__":
     config = Config('local')
@@ -379,69 +315,3 @@ if __name__ == "__main__":
         res_bbox[_][2] *= img_scale[1] / 300
         print('bbox: {}, {}'.format(_ + 1, res_bbox[_].cpu().detach().numpy()))
         print('class: {}, {}'.format(int(res_cls[_]), res_score[_]))
-    # print(idx, '\n', res_bbox, '\n', res_cls, '\n', res_score)
-
-    # config = Config('local')
-    # mean_average_precision = mAP(config.voc2007_test_anno)
-    # test1 = None
-    # with open('./test1.txt') as f:
-    #     test1 = f.readlines()
-
-    # img_id = -1
-
-    # for i, line in tqdm_notebook(enumerate(test1)):
-    #     if line == '\n':
-    #         continue
-    #     if line.split(':')[0] == 'GROUND TRUTH FOR':
-    #         img_id = int(line.split(':')[-1])
-    #     elif line.split(':')[0] == 'label':
-    #         xyxy = line.split(':')[1].split('||')[:4]
-    #         xyxy = np.array([float(i) for i in xyxy])
-    # #         print(line)
-    #         label = int(line.split(':')[1].split('||')[-1])
-            
-    #         mean_average_precision.add_single_gt(img_id, xyxy, label + 1, 0)
-    #     elif line.split(':')[0] == 'PREDICTIONS':
-    #         continue
-    #     else:
-    # #         print(line.split(':')[2].split(' ')[1])
-    #         label = catagory_idx[line.split(':')[1].split(' ')[1]]
-    #         score = float(line.split(':')[2].split(' ')[1][7: -1])
-    #         xyxy = line.split(':')[-1].split(')')[-1].split('||')
-    #         xyxy = np.array([float(i) for i in xyxy])
-            
-    #         mean_average_precision.add_single_pred(img_id, score, xyxy, label)
-    
-    # # mean_average_precision.get_gt_num()
-    # mAP = mean_average_precision.calculate_mAP()
-    # print(mAP)
-
-    # --------------------------------------
-
-    # config = Config('local')
-    # mean_average_precision = mAP(config.voc2007_test_anno)
-
-    # id_anno = mean_average_precision.get_id_annotation(config.voc2007_test_anno)
-
-    # for img_id in id_anno.keys():
-    #     for anno in id_anno[img_id]:
-    #         bbox = np.array(anno['bbox'])
-    #         bbox[2:] = bbox[:2] + bbox[2:]
-    #         mean_average_precision.add_single_gt(img_id, bbox, anno['label'], anno['ignore'])
-            
-    # all_file = glob.glob('./results/*.txt')
-    # for file in all_file:
-    #     idx = catagory_idx[file.split('_')[2].split('.')[0]]
-    #     with open(file) as f:
-    #         lines = f.readlines()
-    #         for line in lines:
-    #             line = line.split(' ')
-    #             img_id = int(line[0])
-    #             score = float(line[1])
-    #             bbox = np.array([float(i) for i in line[2:]])
-    #             mean_average_precision.add_single_pred(img_id, score, bbox, idx)
-
-    # mAP = mean_average_precision.calculate_mAP(metric='12')
-    
-    # print(mAP)
-    # print(np.mean([mAP[k] for k in mAP.keys()]))

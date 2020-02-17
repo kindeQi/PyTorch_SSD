@@ -3,3 +3,5 @@ __pycache__/
 weights/
 dataset/
 annotation/
+png/
+res.json
