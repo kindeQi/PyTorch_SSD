@@ -3,5 +3,7 @@ __pycache__/
 weights/
 dataset/
 annotation/
-png/
+png/*
 res.json
+.ipynb_checkpoints/*
+__pycache__/*
